@@ -5,6 +5,8 @@ shell("cls")
 
 library(mice)
 library(caTools)
+library(ggplot2)
+library(ggfortify)
 
 # ------------------------------- Reading data ------------------------------- #
 
@@ -12,8 +14,8 @@ df <- read.csv("./Air Pollution/city_day.csv")
 
 # ------------------- Making the NA values 0 in AQI column ------------------- #
 
-df_aqi <- df$AQI
-df_aqi[is.na(df_aqi)] <- 0
+df_AQI <- df$AQI
+df_AQI[is.na(df_AQI)] <- 0
 
 # -------------------- Drop unused columns from dataframe -------------------- #
 
@@ -63,15 +65,51 @@ df_test <- subset(df_final, split == FALSE)
 lm1 <- lm(df_AQI ~ ., data = df_train)
 print(summary(lm1))
 
+
+cat("MLR with Imputation : \n")
+
+
 # ----------------------------- Predicting values ---------------------------- #
 
 pred1 <- predict.lm(lm1, df_test, type = "response")
 print(head(pred1))
 
-# ----------------------- Checking performance of model ---------------------- #
+df_test$Prediction <- pred1
 
-performance1 <- data.frame(
-    RMSE = RMSE(pred1, df_test$df_AQI),
-    R2 = R2(pred1, df_test$df_AQI)
-)
-print(performance1)
+# # ----------------------- Calculating RMSE of the model --------------------- #
+
+res <- summary(lm1)
+rss <- c(crossprod(res$residuals))
+mse <- rss / length(res$residuals)
+
+rmse <- sqrt(mse)
+cat("RMSE : ", rmse, "\n")
+
+# ----------------------------- Plotting the Graph --------------------------- #
+
+# Actual vs Prediction
+plt <- ggplot(df_test, aes(PM2.5, df_AQI)) +
+        geom_line(aes(color = "Actual")) +
+        geom_line(
+          aes(
+            PM2.5,
+            Prediction,
+            color = "Prediction"
+          )
+        ) +
+        scale_color_manual(
+            values = c(
+                "Actual" = "red",
+                "Prediction" = "blue"
+            )
+        ) +
+        labs(
+            title = "MLR WITH IMPUTATION : ACTUAL VS PREDICTION",
+        )
+
+View(plt)
+
+# plt3 <- autoplot(lm1, which = 1:6, ncol = 2, label.size = 3,
+#          colour = "lightgreen") + theme_bw()
+
+# print(plt3)

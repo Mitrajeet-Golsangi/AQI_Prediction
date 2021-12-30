@@ -1,14 +1,19 @@
 setwd("D:/VIT Projects/Second Year/1st Semester/DS CP/")
 shell("cls")
 
+library(mice)
+library(caTools)
+library(randomForest)
+library(ggplot2)
+
 # ------------------------------- Reading data ------------------------------- #
 
 df <- read.csv("./Air Pollution/city_day.csv")
 
 # ------------------- Making the NA values 0 in AQI column ------------------- #
 
-df_aqi <- df$AQI
-df_aqi[is.na(df_aqi)] <- 0
+df_AQI <- df$AQI
+df_AQI[is.na(df_AQI)] <- 0
 
 # -------------------- Drop unused columns from dataframe -------------------- #
 
@@ -48,20 +53,51 @@ df_final <- cbind(df_final, df_AQI)
 set.seed(123)
 
 split_ratio <- 0.8 # take in increaments of 0.2
-split <- sample.split(df_cleaned, SplitRatio = split_ratio)
+split <- sample.split(df_final, SplitRatio = split_ratio)
 
-df_impute_train <- subset(df_cleaned, split == TRUE)
-df_impute_test <- subset(df_cleaned, split == FALSE)
+df_impute_train <- subset(df_final, split == TRUE)
+df_impute_test <- subset(df_final, split == FALSE)
 
 # ---------------------------- Creating RF Model ----------------------------- #
 
 rf_na_impute <- randomForest(
-    AQI~.,
+    df_AQI~.,
     data = df_impute_test,
     mtry = sqrt(12),
     ntree = 500
 )
 
+# ----------------------------- Predicting values ---------------------------- #
+
+pred1 <- predict(rf_na_impute, df_impute_test, type = "response")
+df_impute_test$Prediction <- pred1
+
+
 # ----------------------- Checking performance of model ---------------------- #
 
+cat("Random Forest with Imputation : \n")
+
 print(rf_na_impute)
+
+# ----------------------------- Plotting the Graph --------------------------- #
+
+# Actual vs Prediction
+plt <- ggplot(df_impute_test, aes(PM2.5, df_AQI)) +
+        geom_line(aes(color = "Actual")) +
+        geom_line(
+          aes(
+            PM2.5,
+            Prediction,
+            color = "Prediction"
+          )
+        ) +
+        scale_color_manual(
+            values = c(
+                "Actual" = "red",
+                "Prediction" = "blue"
+            )
+        ) +
+        labs(
+            title = "RF WITHOUT IMPUTATION : ACTUAL VS PREDICTION",
+        )
+View(plt)

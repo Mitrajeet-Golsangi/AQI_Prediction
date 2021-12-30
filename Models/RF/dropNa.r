@@ -6,11 +6,14 @@ shell("cls")
 library(caTools)
 library(randomForest)
 library(mice)
+library(ggplot2)
+# library(party)
 
 # ------------------------------- Reading data ------------------------------- #
 
 df <- read.csv("./Air Pollution/city_day.csv");
 df <- df[, -c(1, 2)]
+df$AQI_Bucket <- as.factor(df$AQI_Bucket)
 
 # ---------------------------- Remove rows with NA --------------------------- #
 
@@ -37,6 +40,41 @@ rf_na_omit <- randomForest(
     na.action = na.omit
 )
 
+# ----------------------------- Predicting values ---------------------------- #
+
+pred1 <- predict(rf_na_omit, df_test, type = "response")
+df_test$Prediction <- pred1
+
 # ----------------------- Checking performance of model ---------------------- #
 
+
+cat("Random Forest without Imputation : \n")
+
+
 print(rf_na_omit)
+
+# ----------------------------- Plotting the Graph --------------------------- #
+
+# Actual vs Prediction
+plt <- ggplot(df_test, aes(PM2.5, AQI)) +
+        geom_line(aes(color = "Actual")) +
+        geom_line(
+          aes(
+            PM2.5,
+            Prediction,
+            color = "Prediction"
+          )
+        ) +
+        scale_color_manual(
+            values = c(
+                "Actual" = "red",
+                "Prediction" = "blue"
+            )
+        ) +
+        labs(
+            title = "RF WITHOUT IMPUTATION : ACTUAL VS PREDICTION",
+        )
+View(plt)
+
+# tr <- ctree(AQI~., data = df_train)
+# print(plot(tr))
